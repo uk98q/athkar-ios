@@ -124,7 +124,7 @@ struct HomeView: View {
         case .quran:
             QuranIndexView()
         case .quranSurah(let number):
-            QuranSurahView(number: number)
+            MushafView(startPage: MushafStore.shared.startPage(of: number))
         }
     }
 

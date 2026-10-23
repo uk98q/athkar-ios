@@ -41,7 +41,7 @@ final class QuranStore: ObservableObject {
 }
 
 enum Reciter: Int, CaseIterable, Identifiable {
-    case alafasy, basit, sudais, ghamidi, maher
+    case alafasy, basit, sudais, ghamidi, maher, yasser
 
     var id: Int { rawValue }
 
@@ -52,6 +52,7 @@ enum Reciter: Int, CaseIterable, Identifiable {
         case .sudais: return "عبد الرحمن السديس"
         case .ghamidi: return "سعد الغامدي"
         case .maher: return "ماهر المعيقلي"
+        case .yasser: return "ياسر الدوسري"
         }
     }
 
@@ -63,6 +64,7 @@ enum Reciter: Int, CaseIterable, Identifiable {
         case .sudais: return "Abdurrahmaan_As-Sudais_192kbps"
         case .ghamidi: return "Ghamadi_40kbps"
         case .maher: return "MaherAlMuaiqly128kbps"
+        case .yasser: return "Yasser_Ad-Dussary_128kbps"
         }
     }
 
