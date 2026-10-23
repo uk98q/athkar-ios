@@ -302,6 +302,8 @@ struct PrayerHeader: View {
                                     .font(Theme.font(13, weight: .medium, scale: scale))
                                     .foregroundStyle(prayer.id == next?.id ? Theme.mint : .white)
                                     .monospacedDigit()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -341,9 +343,10 @@ struct PrayerHeader: View {
     private func clock(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
+        formatter.dateFormat = "h:mm"
         formatter.timeZone = .current
-        return formatter.string(from: date)
+        let hour = Calendar.current.component(.hour, from: date)
+        return formatter.string(from: date) + (hour < 12 ? " ص" : " م")
     }
 
     private func countdown(_ interval: TimeInterval) -> String {
