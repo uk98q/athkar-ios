@@ -124,6 +124,19 @@ struct HomeView: View {
 
     private var topBar: some View {
         HStack(spacing: 12) {
+            Image("SunriseLogo")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
+                )
+                .accessibilityHidden(true)
+            Text("مسلم")
+                .font(Theme.font(20, weight: .bold, scale: scale))
+                .foregroundStyle(.white)
             Button {
                 path.append(AppRoute.settings)
             } label: {

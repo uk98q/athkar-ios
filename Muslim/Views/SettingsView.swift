@@ -62,7 +62,7 @@ struct SettingsView: View {
 
                     section(title: "عن التطبيق") {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("مسلم: الإصدار 1.2")
+                            Text("مسلم: الإصدار 1.3")
                                 .font(Theme.font(16, weight: .medium))
                                 .foregroundStyle(.white)
                             Text("كل المزايا مجانية، ولا توجد اشتراكات أو مشتريات داخل التطبيق.")
