@@ -26,8 +26,8 @@ jobs:
       - name: Build for device without signing
         run: |
           xcodebuild \
-            -project Athkar.xcodeproj \
-            -scheme Athkar \
+            -project Muslim.xcodeproj \
+            -scheme Muslim \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
@@ -39,29 +39,29 @@ jobs:
 
       - name: Package unsigned IPA
         run: |
-          APP_PATH=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name "Athkar.app" | head -n 1)
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name "Muslim.app" | head -n 1)
           test -n "$APP_PATH"
-          rm -rf Payload Athkar-unsigned.ipa
+          rm -rf Payload Muslim-unsigned.ipa
           mkdir Payload
           cp -R "$APP_PATH" Payload/
-          zip -qr Athkar-unsigned.ipa Payload
+          zip -qr Muslim-unsigned.ipa Payload
           rm -rf Payload
-          ls -la Athkar-unsigned.ipa
+          ls -la Muslim-unsigned.ipa
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Athkar-unsigned-ipa-run-${{ github.run_number }}
-          path: Athkar-unsigned.ipa
+          name: Muslim-unsigned-ipa-run-${{ github.run_number }}
+          path: Muslim-unsigned.ipa
 
       - name: Publish release with a new versioned IPA
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v1.1.${GITHUB_RUN_NUMBER}"
-          ASSET="Athkar-v1.1-build${GITHUB_RUN_NUMBER}-unsigned.ipa"
-          cp Athkar-unsigned.ipa "$ASSET"
+          TAG="v1.2.${GITHUB_RUN_NUMBER}"
+          ASSET="Muslim-v1.2-build${GITHUB_RUN_NUMBER}-unsigned.ipa"
+          cp Muslim-unsigned.ipa "$ASSET"
           gh release create "$TAG" "$ASSET" \
-            --title "أذكار $TAG" \
+            --title "مسلم $TAG" \
             --notes "نسخة IPA غير موقعة للتثبيت عبر LiveContainer أو Sideloadly. كل المزايا مجانية." \
             --target "$GITHUB_SHA"

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var store: ProgressStore
+    @EnvironmentObject private var location: LocationService
     @AppStorage("textSize") private var textSize = 1
     @AppStorage("haptics") private var haptics = true
     @State private var showResetConfirm = false
@@ -28,6 +29,25 @@ struct SettingsView: View {
                             .tint(Theme.mint)
                     }
 
+                    section(title: "الموقع وأوقات الصلاة") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(location.hasLocation
+                                 ? "الأوقات محسوبة على موقعك الحالي، ولا يُرسل الموقع إلى أي خادم."
+                                 : "لم يُسمح بالموقع بعد، لذلك الأوقات محسوبة لمكة المكرمة.")
+                                .font(Theme.font(14))
+                                .foregroundStyle(Theme.secondaryText)
+                            Button {
+                                location.start()
+                            } label: {
+                                Text("تحديث الموقع")
+                                    .font(Theme.font(16, weight: .medium))
+                                    .foregroundStyle(Theme.mint)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
                     section(title: "البيانات") {
                         Button {
                             showResetConfirm = true
@@ -42,13 +62,13 @@ struct SettingsView: View {
 
                     section(title: "عن التطبيق") {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("أذكار: الإصدار 1.1")
+                            Text("مسلم: الإصدار 1.2")
                                 .font(Theme.font(16, weight: .medium))
                                 .foregroundStyle(.white)
                             Text("كل المزايا مجانية، ولا توجد اشتراكات أو مشتريات داخل التطبيق.")
                                 .font(Theme.font(14))
                                 .foregroundStyle(Theme.secondaryText)
-                            Text("نصوص الأذكار مأخوذة من الأذكار المأثورة المشهورة، وينصح بمراجعتها من مصدر موثوق.")
+                            Text("نصوص الأذكار من الأذكار المأثورة المشهورة، وينصح بمراجعتها من مصدر موثوق.")
                                 .font(Theme.font(14))
                                 .foregroundStyle(Theme.secondaryText)
                             Text("الخط: Readex Pro بترخيص SIL Open Font License 1.1.")
