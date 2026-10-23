@@ -51,15 +51,17 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Athkar-unsigned-ipa
+          name: Athkar-unsigned-ipa-run-${{ github.run_number }}
           path: Athkar-unsigned.ipa
 
-      - name: Publish release
+      - name: Publish release with a new versioned IPA
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v1.0.${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" Athkar-unsigned.ipa \
+          TAG="v1.1.${GITHUB_RUN_NUMBER}"
+          ASSET="Athkar-v1.1-build${GITHUB_RUN_NUMBER}-unsigned.ipa"
+          cp Athkar-unsigned.ipa "$ASSET"
+          gh release create "$TAG" "$ASSET" \
             --title "أذكار $TAG" \
-            --notes "نسخة IPA غير موقعة للتثبيت عبر LiveContainer أو Sideloadly." \
+            --notes "نسخة IPA غير موقعة للتثبيت عبر LiveContainer أو Sideloadly. كل المزايا مجانية." \
             --target "$GITHUB_SHA"

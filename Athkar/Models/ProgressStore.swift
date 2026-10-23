@@ -2,11 +2,11 @@ import Foundation
 import SwiftUI
 
 /// Stores today's counter values on the device only (UserDefaults).
-/// Keys look like "2026-10-23|morning|m01" and old days are dropped on load.
+/// Keys look like "2026-10-23|morning|m01"; keys from older days are dropped on load.
 final class ProgressStore: ObservableObject {
     @Published private(set) var counts: [String: Int] = [:]
 
-    private let storageKey = "athkar.progress.v1"
+    private let storageKey = "athkar.progress.v2"
 
     private static let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -24,39 +24,45 @@ final class ProgressStore: ObservableObject {
         Self.dayFormatter.string(from: Date()) + "|"
     }
 
-    private func key(_ period: Period, _ id: String) -> String {
-        todayPrefix + period.rawValue + "|" + id
+    private func key(_ category: AthkarCategory, _ id: String) -> String {
+        todayPrefix + category.rawValue + "|" + id
     }
 
-    func count(_ period: Period, _ id: String) -> Int {
-        counts[key(period, id)] ?? 0
+    func count(_ category: AthkarCategory, _ id: String) -> Int {
+        counts[key(category, id)] ?? 0
     }
 
-    func tap(_ period: Period, _ dhikr: Dhikr) {
-        let k = key(period, dhikr.id)
+    func tap(_ category: AthkarCategory, _ dhikr: Dhikr) {
+        let k = key(category, dhikr.id)
         let current = counts[k] ?? 0
         guard current < dhikr.target else { return }
         counts[k] = current + 1
         save()
     }
 
-    func resetItem(_ period: Period, _ dhikr: Dhikr) {
-        counts[key(period, dhikr.id)] = nil
+    func resetItem(_ category: AthkarCategory, _ dhikr: Dhikr) {
+        counts[key(category, dhikr.id)] = nil
         save()
     }
 
-    func resetPeriod(_ period: Period) {
-        let prefix = todayPrefix + period.rawValue + "|"
+    func resetCategory(_ category: AthkarCategory) {
+        let prefix = todayPrefix + category.rawValue + "|"
         counts = counts.filter { !$0.key.hasPrefix(prefix) }
         save()
     }
 
-    /// Fraction of the whole set completed, weighted by each item's target.
-    func progress(_ period: Period) -> Double {
-        let items = period.items
+    func resetToday() {
+        let prefix = todayPrefix
+        counts = counts.filter { !$0.key.hasPrefix(prefix) }
+        save()
+    }
+
+    /// Fraction of the whole category completed, weighted by each item's target.
+    func progress(_ category: AthkarCategory) -> Double {
+        let items = category.items
         let total = items.reduce(0) { $0 + $1.target }
         guard total > 0 else { return 0 }
-        let done = items.reduce(0) { $0 + min(count(period, $1.id), $1.target) }
+        let done = items.reduce(0) { $0 + min(count(category, $1.id), $1.target) }
         return Double(done) / Double(total)
     }
 

@@ -2,40 +2,61 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var store: ProgressStore
+    @AppStorage("textSize") private var textSize = 1
+
+    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
     private var isMorning: Bool {
         Calendar.current.component(.hour, from: Date()) < 12
     }
 
-    private var currentPeriod: Period {
+    private var suggested: AthkarCategory {
         isMorning ? .morning : .evening
+    }
+
+    private var scale: CGFloat {
+        Theme.textScale(textSize)
     }
 
     var body: some View {
         ZStack {
-            AmbientBackground(tint: currentPeriod.accent)
+            AmbientBackground(tint: suggested.accent)
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header
-                    ForEach(Period.allCases) { period in
-                        NavigationLink(value: period) {
-                            PeriodCard(period: period, progress: store.progress(period))
-                        }
-                        .buttonStyle(.plain)
+
+                    NavigationLink {
+                        CategoryView(category: suggested)
+                    } label: {
+                        SuggestedCard(category: suggested, progress: store.progress(suggested), scale: scale)
                     }
+                    .buttonStyle(.plain)
+
+                    Text("الأقسام")
+                        .font(Theme.font(18, weight: .bold, scale: scale))
+                        .foregroundStyle(.white)
+
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(AthkarCategory.allCases) { category in
+                            NavigationLink {
+                                CategoryView(category: category)
+                            } label: {
+                                CategoryTile(category: category, progress: store.progress(category), scale: scale)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
                     Text("يتم حفظ التقدم على جهازك فقط")
-                        .font(Theme.font(13))
+                        .font(Theme.font(13, scale: scale))
                         .foregroundStyle(Theme.secondaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 8)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
-                .padding(.bottom, 40)
+                .padding(.bottom, 120)
             }
-        }
-        .navigationDestination(for: Period.self) { period in
-            PeriodListView(period: period)
         }
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -43,10 +64,10 @@ struct HomeView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(isMorning ? "صباح الخير" : "مساء الخير")
-                .font(Theme.font(34, weight: .bold))
+                .font(Theme.font(34, weight: .bold, scale: scale))
                 .foregroundStyle(.white)
             Text(hijriDateText)
-                .font(Theme.font(16))
+                .font(Theme.font(16, scale: scale))
                 .foregroundStyle(Theme.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -63,52 +84,57 @@ struct HomeView: View {
     }
 }
 
-struct PeriodCard: View {
-    let period: Period
+struct SuggestedCard: View {
+    let category: AthkarCategory
     let progress: Double
+    let scale: CGFloat
 
     var body: some View {
         HStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.12), lineWidth: 7)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(period.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Image(systemName: period.symbol)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(period.accent)
-            }
-            .frame(width: 66, height: 66)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(period.title)
-                    .font(Theme.font(20, weight: .bold))
+            VStack(alignment: .leading, spacing: 8) {
+                Text("مقترح الآن")
+                    .font(Theme.font(13, weight: .medium, scale: scale))
+                    .foregroundStyle(category.accent)
+                Text(category.title)
+                    .font(Theme.font(22, weight: .bold, scale: scale))
                     .foregroundStyle(.white)
-                Text(period.subtitle)
-                    .font(Theme.font(14))
+                Text(progressLabel(progress))
+                    .font(Theme.font(14, scale: scale))
                     .foregroundStyle(Theme.secondaryText)
-                Text(progressText)
-                    .font(Theme.font(13, weight: .medium))
-                    .foregroundStyle(period.accent)
             }
-
             Spacer(minLength: 0)
-
+            ProgressRing(progress: progress, color: category.accent, symbol: category.symbol, size: 72)
             Image(systemName: "chevron.forward")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Theme.secondaryText)
         }
-        .padding(20)
+        .padding(22)
         .frame(maxWidth: .infinity)
         .glassCard(cornerRadius: 30, interactive: true)
     }
+}
 
-    private var progressText: String {
-        if progress >= 1 {
-            return "تم إنجاز الذكر كله"
+struct CategoryTile: View {
+    let category: AthkarCategory
+    let progress: Double
+    let scale: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: category.symbol)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(category.accent)
+            Spacer(minLength: 0)
+            Text(category.title)
+                .font(Theme.font(16, weight: .bold, scale: scale))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+            Text(progressLabel(progress))
+                .font(Theme.font(13, scale: scale))
+                .foregroundStyle(Theme.secondaryText)
         }
-        return "\(Int(progress * 100))% مكتمل"
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
+        .glassCard(cornerRadius: 26, interactive: true)
     }
 }
