@@ -58,8 +58,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v1.5.${GITHUB_RUN_NUMBER}"
-          ASSET="Muslim-v1.5-unsigned.ipa"
+          TAG="v1.6.${GITHUB_RUN_NUMBER}"
+          ASSET="Muslim-v1.6-unsigned.ipa"
           cp Muslim-unsigned.ipa "$ASSET"
           gh release create "$TAG" "$ASSET" \
             --title "مسلم $TAG" \

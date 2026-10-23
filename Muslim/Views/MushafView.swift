@@ -1,10 +1,12 @@
 import SwiftUI
+import UIKit
 
 /// Full mushaf reader: one page at a time, 15 justified lines, streamed audio and optional tafsir.
 struct MushafView: View {
     let startPage: Int
 
     @AppStorage("quran.tafsir") private var tafsirOn = false
+    @AppStorage("quran.tafsirOpen") private var tafsirOpen = true
     @AppStorage("quran.reciter") private var reciterRaw = 0
     @StateObject private var player = MushafPlayer()
     @State private var page: Int
@@ -19,23 +21,27 @@ struct MushafView: View {
     private var basmala: String { QuranStore.shared.surah(1)?.ayahs.first ?? "" }
 
     var body: some View {
-        TabView(selection: $page) {
-            ForEach(MushafStore.shared.pages) { p in
-                MushafPageView(
-                    page: p,
-                    basmala: basmala,
-                    selected: player.selected,
-                    onTap: { player.select($0) }
-                )
-                .tag(p.n)
+        // A column, not an overlay: the page shrinks to make room for the audio bar and tafsir.
+        VStack(spacing: 0) {
+            TabView(selection: $page) {
+                ForEach(MushafStore.shared.pages) { p in
+                    MushafPageView(
+                        page: p,
+                        basmala: basmala,
+                        selected: player.selected,
+                        onTap: { player.select($0) }
+                    )
+                    .tag(p.n)
+                }
             }
-        }
-        .environment(\.layoutDirection, .rightToLeft)
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .background(Color.black.ignoresSafeArea())
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+            .environment(\.layoutDirection, .rightToLeft)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(maxHeight: .infinity)
+
             bottomArea
         }
+        .environment(\.layoutDirection, .rightToLeft)
+        .background(Color.black.ignoresSafeArea())
         .navigationTitle("المصحف")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: player.loaded) { _, newValue in
@@ -80,19 +86,40 @@ struct MushafView: View {
     }
 
     private var tafsirCard: some View {
-        VStack(spacing: 6) {
-            ScrollView {
-                Text(tafsirText ?? "جارٍ تحميل التفسير…")
-                    .font(Theme.font(14))
-                    .foregroundStyle(.white.opacity(0.88))
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+        VStack(spacing: 8) {
+            Button {
+                withAnimation { tafsirOpen.toggle() }
+            } label: {
+                HStack {
+                    Text("التفسير · ابن كثير")
+                        .font(Theme.font(13, weight: .medium))
+                        .foregroundStyle(Theme.mint)
+                    Spacer()
+                    Text(tafsirOpen ? "إخفاء" : "إظهار")
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                .contentShape(Rectangle())
             }
-            .frame(maxHeight: 150)
-            Text(TafsirService.attribution)
-                .font(Theme.font(11))
-                .foregroundStyle(Theme.secondaryText)
-                .multilineTextAlignment(.center)
+            .buttonStyle(.plain)
+
+            if tafsirOpen {
+                ScrollView {
+                    ArabicParagraph(
+                        text: tafsirText ?? "جارٍ تحميل التفسير…",
+                        fontName: "ReadexPro-Regular",
+                        size: 15,
+                        color: UIColor.white.withAlphaComponent(0.9)
+                    )
+                }
+                .frame(maxHeight: 170)
+
+                Text(TafsirService.attribution)
+                    .font(Theme.font(11))
+                    .foregroundStyle(Theme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
         }
         .padding(14)
         .glassCard(cornerRadius: 20)
@@ -145,6 +172,42 @@ struct MushafView: View {
     }
 }
 
+/// Arabic paragraph shown through UIKit with forced right-to-left direction and word wrapping.
+/// This avoids the reversed-looking rendering seen with SwiftUI Text for long Arabic blocks.
+private struct ArabicParagraph: UIViewRepresentable {
+    let text: String
+    let fontName: String
+    let size: CGFloat
+    let color: UIColor
+
+    func makeUIView(context: Context) -> UILabel {
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.backgroundColor = .clear
+        label.setContentCompressionResistancePriority(.required, for: .vertical)
+        return label
+    }
+
+    func updateUIView(_ label: UILabel, context: Context) {
+        label.semanticContentAttribute = .forceRightToLeft
+        let style = NSMutableParagraphStyle()
+        style.alignment = .right
+        style.baseWritingDirection = .rightToLeft
+        style.lineSpacing = 6
+        let font = UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size)
+        label.attributedText = NSAttributedString(string: text, attributes: [
+            .font: font,
+            .foregroundColor: color,
+            .paragraphStyle: style
+        ])
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView label: UILabel, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0 else { return nil }
+        return label.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+    }
+}
+
 /// One mushaf page: a header, 15 justified text lines, and a footer.
 struct MushafPageView: View {
     let page: MushafPage
@@ -153,15 +216,19 @@ struct MushafPageView: View {
     let onTap: (AyahRef) -> Void
 
     private static let baseSize: CGFloat = 20
+    private static let sidePadding: CGFloat = 14
 
-    private enum Piece {
-        case word(String, AyahRef)
-        case mark(Int)
+    /// One word, plus its ayah medallion when the word ends the verse.
+    private struct Unit {
+        let word: String
+        let ref: AyahRef
+        let mark: Int?
     }
 
     var body: some View {
         GeometryReader { geo in
             let size = fontSize(for: geo.size)
+            let lineWidth = max(geo.size.width - Self.sidePadding * 2, 100)
             VStack(spacing: 0) {
                 HStack {
                     Text(MushafStore.shared.juzName(for: page))
@@ -175,7 +242,7 @@ struct MushafPageView: View {
                 .frame(height: 26)
 
                 ForEach(Array(page.lines.enumerated()), id: \.offset) { _, line in
-                    lineView(line, size: size)
+                    lineView(line, size: size, width: lineWidth)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
@@ -190,15 +257,15 @@ struct MushafPageView: View {
                 }
                 .frame(height: 26)
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Self.sidePadding)
             .padding(.top, 6)
             .padding(.bottom, 2)
         }
     }
 
-    /// One size per page: the widest line fills the width, so every line is justified.
+    /// One size per page: the widest line fills the width, so every line fits.
     private func fontSize(for size: CGSize) -> CGFloat {
-        let availW = max(size.width - 28, 100)
+        let availW = max(size.width - Self.sidePadding * 2, 100)
         let availH = max(size.height - 6 - 2 - 52, 100)
         let base = UIFont(name: "AmiriQuran-Regular", size: Self.baseSize)
             ?? UIFont.systemFont(ofSize: Self.baseSize)
@@ -216,10 +283,10 @@ struct MushafPageView: View {
     }
 
     @ViewBuilder
-    private func lineView(_ line: MushafLine, size: CGFloat) -> some View {
+    private func lineView(_ line: MushafLine, size: CGFloat, width: CGFloat) -> some View {
         switch line.k {
         case "t":
-            textLine(line.items ?? [], size: size)
+            textLine(line.items ?? [], size: size, width: width)
         case "s":
             Text("سورة \(QuranStore.shared.surah(line.surah ?? 0)?.name ?? "")")
                 .font(Theme.font(size * 0.7, weight: .medium))
@@ -238,53 +305,67 @@ struct MushafPageView: View {
         }
     }
 
-    private func textLine(_ items: [MushafItem], size: CGFloat) -> some View {
-        let pieces = makePieces(items)
-        return HStack(spacing: 0) {
-            ForEach(Array(pieces.enumerated()), id: \.offset) { index, piece in
-                if index > 0 { Spacer(minLength: 0) }
-                pieceView(piece, size: size)
+    /// Justified line: the gaps are equal and sit only between words, never inside a word or medallion.
+    private func textLine(_ items: [MushafItem], size: CGFloat, width: CGFloat) -> some View {
+        let units = makeUnits(items)
+        let natural = units.reduce(CGFloat(0)) { $0 + unitWidth($1, size: size) }
+        let gap = units.count > 1 ? max((width - natural) / CGFloat(units.count - 1) - 0.5, 0) : 0
+        return HStack(spacing: gap) {
+            ForEach(Array(units.enumerated()), id: \.offset) { _, unit in
+                unitView(unit, size: size)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(width: width)
     }
 
-    private func makePieces(_ items: [MushafItem]) -> [Piece] {
-        var result: [Piece] = []
+    private func makeUnits(_ items: [MushafItem]) -> [Unit] {
+        var result: [Unit] = []
         for item in items {
             let ref = AyahRef(surah: item.s, ayah: item.a)
-            for word in item.t.split(separator: " ") {
-                result.append(.word(String(word), ref))
-            }
-            if item.e == 1 {
-                result.append(.mark(item.a))
+            let words = item.t.split(separator: " ").map(String.init)
+            for (index, word) in words.enumerated() {
+                let isLast = index == words.count - 1
+                result.append(Unit(word: word, ref: ref, mark: (isLast && item.e == 1) ? item.a : nil))
             }
         }
         return result
     }
 
+    private func unitWidth(_ unit: Unit, size: CGFloat) -> CGFloat {
+        let font = UIFont(name: "AmiriQuran-Regular", size: size) ?? UIFont.systemFont(ofSize: size)
+        var width = (unit.word as NSString).size(withAttributes: [.font: font]).width
+        if unit.mark != nil {
+            width += size * 1.25 + 4
+        }
+        return width
+    }
+
     @ViewBuilder
-    private func pieceView(_ piece: Piece, size: CGFloat) -> some View {
-        switch piece {
-        case .word(let word, let ref):
-            Text(word)
+    private func unitView(_ unit: Unit, size: CGFloat) -> some View {
+        HStack(spacing: 4) {
+            Text(unit.word)
                 .font(.custom("AmiriQuran-Regular", size: size))
-                .foregroundStyle(selected == ref ? Theme.mint : Color.white)
+                .foregroundStyle(selected == unit.ref ? Theme.mint : Color.white)
                 .lineLimit(1)
                 .fixedSize()
                 .contentShape(Rectangle())
-                .onTapGesture { onTap(ref) }
-        case .mark(let number):
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.55), lineWidth: 0.9)
-                Text(arabicDigits(number))
-                    .font(Theme.font(size * 0.42))
-                    .foregroundStyle(Color.white.opacity(0.85))
-                    .lineLimit(1)
-                    .fixedSize()
+                .onTapGesture { onTap(unit.ref) }
+            if let number = unit.mark {
+                medallion(number, size: size)
             }
-            .frame(width: size * 1.25, height: size * 1.25)
         }
+    }
+
+    private func medallion(_ number: Int, size: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.55), lineWidth: 0.9)
+            Text(arabicDigits(number))
+                .font(Theme.font(size * 0.42))
+                .foregroundStyle(Color.white.opacity(0.85))
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .frame(width: size * 1.25, height: size * 1.25)
     }
 }
