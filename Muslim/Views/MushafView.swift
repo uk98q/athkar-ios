@@ -19,26 +19,22 @@ struct MushafView: View {
     private var basmala: String { QuranStore.shared.surah(1)?.ayahs.first ?? "" }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.black.ignoresSafeArea()
-            TabView(selection: $page) {
-                ForEach(MushafStore.shared.pages) { p in
-                    MushafPageView(
-                        page: p,
-                        basmala: basmala,
-                        selected: player.selected,
-                        onTap: { player.select($0) }
-                    )
-                    .tag(p.n)
-                }
+        TabView(selection: $page) {
+            ForEach(MushafStore.shared.pages) { p in
+                MushafPageView(
+                    page: p,
+                    basmala: basmala,
+                    selected: player.selected,
+                    onTap: { player.select($0) }
+                )
+                .tag(p.n)
             }
-            .environment(\.layoutDirection, .rightToLeft)
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .ignoresSafeArea(edges: .bottom)
-
-            if let sel = player.selected {
-                playerBar(sel)
-            }
+        }
+        .environment(\.layoutDirection, .rightToLeft)
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .background(Color.black.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            bottomArea
         }
         .navigationTitle("المصحف")
         .navigationBarTitleDisplayMode(.inline)
@@ -55,6 +51,24 @@ struct MushafView: View {
         .onDisappear { player.stop() }
     }
 
+    /// Reserved area under the page: keeps the page size stable whether or not audio is selected.
+    @ViewBuilder
+    private var bottomArea: some View {
+        VStack(spacing: 8) {
+            if let sel = player.selected {
+                if tafsirOn {
+                    tafsirCard
+                }
+                audioBar(sel)
+            } else {
+                Color.clear.frame(height: 68)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity)
+    }
+
     private func loadTafsir() async {
         tafsirText = nil
         guard tafsirOn, let sel = player.selected else { return }
@@ -65,62 +79,67 @@ struct MushafView: View {
         }
     }
 
-    private func playerBar(_ sel: AyahRef) -> some View {
-        VStack(spacing: 12) {
-            HStack {
+    private var tafsirCard: some View {
+        VStack(spacing: 6) {
+            ScrollView {
+                Text(tafsirText ?? "جارٍ تحميل التفسير…")
+                    .font(Theme.font(14))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .frame(maxHeight: 150)
+            Text(TafsirService.attribution)
+                .font(Theme.font(11))
+                .foregroundStyle(Theme.secondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(14)
+        .glassCard(cornerRadius: 20)
+    }
+
+    private func audioBar(_ sel: AyahRef) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(reciter.name)
-                    .font(Theme.font(13))
+                    .font(Theme.font(12))
                     .foregroundStyle(Theme.mint)
-                Spacer()
                 Text("سورة \(QuranStore.shared.surah(sel.surah)?.name ?? "") · الآية \(arabicDigits(sel.ayah))")
-                    .font(Theme.font(13))
+                    .font(Theme.font(11))
                     .foregroundStyle(Theme.secondaryText)
             }
-            HStack(spacing: 18) {
-                controlButton("forward.end.fill", label: "الآية السابقة") {
+            Spacer(minLength: 4)
+            HStack(spacing: 10) {
+                controlButton("chevron.right", size: 44, label: "الآية السابقة") {
                     player.step(-1, reciter: reciter)
                 }
                 Button {
                     player.togglePlay(reciter: reciter)
                 } label: {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 60, height: 60)
-                        .glassCard(cornerRadius: 30)
+                        .frame(width: 54, height: 54)
+                        .glassCard(cornerRadius: 27)
                 }
                 .accessibilityLabel(player.isPlaying ? "إيقاف مؤقت" : "تشغيل")
-                controlButton("backward.end.fill", label: "الآية التالية") {
+                controlButton("chevron.left", size: 44, label: "الآية التالية") {
                     player.step(1, reciter: reciter)
                 }
             }
-            if tafsirOn {
-                ScrollView {
-                    Text(tafsirText ?? "جارٍ تحميل التفسير…")
-                        .font(Theme.font(14))
-                        .foregroundStyle(.white.opacity(0.88))
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-                .frame(maxHeight: 170)
-                Text(TafsirService.attribution)
-                    .font(Theme.font(11))
-                    .foregroundStyle(Theme.secondaryText)
-                    .multilineTextAlignment(.center)
-            }
         }
-        .padding(16)
-        .glassCard(cornerRadius: 24)
-        .padding(12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .glassCard(cornerRadius: 26)
     }
 
-    private func controlButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+    private func controlButton(_ symbol: String, size: CGFloat, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Theme.mint)
-                .frame(width: 48, height: 48)
-                .glassCard(cornerRadius: 24)
+                .frame(width: size, height: size)
+                .glassCard(cornerRadius: size / 2)
         }
         .accessibilityLabel(label)
     }
@@ -172,14 +191,15 @@ struct MushafPageView: View {
                 .frame(height: 26)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 6)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
         }
     }
 
     /// One size per page: the widest line fills the width, so every line is justified.
     private func fontSize(for size: CGSize) -> CGFloat {
         let availW = max(size.width - 28, 100)
-        let availH = max(size.height - 12 - 52, 100)
+        let availH = max(size.height - 6 - 2 - 52, 100)
         let base = UIFont(name: "AmiriQuran-Regular", size: Self.baseSize)
             ?? UIFont.systemFont(ofSize: Self.baseSize)
         var widest: CGFloat = 1
