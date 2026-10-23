@@ -277,7 +277,7 @@ struct MushafPageView: View {
             let medallions = CGFloat(items.filter { $0.e == 1 }.count) * 1.25 * Self.baseSize
             widest = max(widest, width + medallions)
         }
-        let byWidth = Self.baseSize * availW / widest
+        let byWidth = 0.9 * Self.baseSize * availW / widest
         let byHeight = (availH / 15) / 1.6
         return min(max(min(byWidth, byHeight), 12), 36)
     }
