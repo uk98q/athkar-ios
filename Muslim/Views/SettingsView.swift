@@ -5,6 +5,8 @@ struct SettingsView: View {
     @EnvironmentObject private var location: LocationService
     @AppStorage("textSize") private var textSize = 1
     @AppStorage("haptics") private var haptics = true
+    @AppStorage("quran.reciter") private var reciterRaw = 0
+    @AppStorage("quran.tafsir") private var tafsirOn = false
     @State private var showResetConfirm = false
 
     var body: some View {
@@ -27,6 +29,26 @@ struct SettingsView: View {
                             .font(Theme.font(16))
                             .foregroundStyle(.white)
                             .tint(Theme.mint)
+                    }
+
+                    section(title: "القرآن الكريم") {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Picker("القارئ", selection: $reciterRaw) {
+                                ForEach(Reciter.allCases) { reciter in
+                                    Text(reciter.name).tag(reciter.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.mint)
+                            Toggle("إظهار زر التفسير لكل آية", isOn: $tafsirOn)
+                                .font(Theme.font(16))
+                                .foregroundStyle(.white)
+                                .tint(Theme.mint)
+                            Text("التفسير: تفسير ابن كثير عبر quran.com. الصوت يُبث من everyayah.com عند الاستماع فقط، ولا يُحفظ على الجهاز.")
+                                .font(Theme.font(13))
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     section(title: "الموقع وأوقات الصلاة") {
@@ -62,9 +84,15 @@ struct SettingsView: View {
 
                     section(title: "عن التطبيق") {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("مسلم: الإصدار 1.3")
+                            Text("مسلم: الإصدار 1.4")
                                 .font(Theme.font(16, weight: .medium))
                                 .foregroundStyle(.white)
+                            Text("نص القرآن: مشروع تنزيل Tanzil.net، رواية حفص عن عاصم، برخصة CC BY 3.0.")
+                                .font(Theme.font(14))
+                                .foregroundStyle(Theme.secondaryText)
+                            Text("التفسير: تفسير ابن كثير (ت 774هـ) عبر واجهة quran.com.")
+                                .font(Theme.font(14))
+                                .foregroundStyle(Theme.secondaryText)
                             Text("كل المزايا مجانية، ولا توجد اشتراكات أو مشتريات داخل التطبيق.")
                                 .font(Theme.font(14))
                                 .foregroundStyle(Theme.secondaryText)

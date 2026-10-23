@@ -6,6 +6,8 @@ enum AppRoute: Hashable {
     case tasbih
     case counter
     case settings
+    case quran
+    case quranSurah(Int)
 }
 
 struct HomeSection: Identifiable {
@@ -45,6 +47,8 @@ struct HomeView: View {
                         subtitle: progressLabel(store.progress(.wakeUp)), symbol: "alarm.fill", color: Theme.dawn),
             HomeSection(id: "names", route: .names, title: "أسماء الله الحسنى",
                         subtitle: "\(AllahNames.all.count) اسمًا", symbol: "star.fill", color: Theme.mint),
+            HomeSection(id: "quran", route: .quran, title: "القرآن الكريم",
+                        subtitle: "النص والتفسير والتلاوة", symbol: "book.fill", color: Theme.mint),
             HomeSection(id: "tasbih", route: .tasbih, title: "المسبحة",
                         subtitle: "عدّ بالتسبيح والتحميد", symbol: "hand.tap.fill", color: Theme.dawn),
             HomeSection(id: "counter", route: .counter, title: "العداد",
@@ -117,6 +121,10 @@ struct HomeView: View {
             CounterView()
         case .settings:
             SettingsView()
+        case .quran:
+            QuranIndexView()
+        case .quranSurah(let number):
+            QuranSurahView(number: number)
         }
     }
 
