@@ -243,7 +243,8 @@ struct MushafPageView: View {
 
                 ForEach(Array(page.lines.enumerated()), id: \.offset) { _, line in
                     lineView(line, size: size, width: lineWidth)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: rowHeight(geo.size))
                 }
 
                 HStack {
@@ -266,7 +267,7 @@ struct MushafPageView: View {
     /// One size per page: the widest line fills the width, so every line fits.
     private func fontSize(for size: CGSize) -> CGFloat {
         let availW = max(size.width - Self.sidePadding * 2, 100)
-        let availH = max(size.height - 6 - 2 - 52, 100)
+        let availH = max(size.height - Self.verticalChrome, 100)
         let base = UIFont(name: "AmiriQuran-Regular", size: Self.baseSize)
             ?? UIFont.systemFont(ofSize: Self.baseSize)
         var widest: CGFloat = 1
@@ -280,6 +281,15 @@ struct MushafPageView: View {
         let byWidth = 0.9 * Self.baseSize * availW / widest
         let byHeight = (availH / 15) / 1.6
         return min(max(min(byWidth, byHeight), 12), 36)
+    }
+
+    /// Header, footer and paddings: everything that is not one of the 15 text lines.
+    private static let verticalChrome: CGFloat = 6 + 2 + 52
+
+    /// Fixed height of one line slot. Lines are never allowed to grow past it, so the
+    /// 15 lines and the footer always stay inside the page and nothing is cut off.
+    private func rowHeight(_ size: CGSize) -> CGFloat {
+        max((size.height - Self.verticalChrome) / 15, 1)
     }
 
     @ViewBuilder
