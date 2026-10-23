@@ -62,8 +62,9 @@ struct HomeView: View {
                 AmbientBackground(tint: Theme.dusk)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 26) {
-                        topBar
-                        PrayerHeader(scale: scale)
+                       topBar
+                       PrayerHeader(scale: scale)
+                        DailyCard(scale: scale)
                         featuredCarousel
                         Text("الأقسام")
                             .font(Theme.font(18, weight: .bold, scale: scale))
@@ -185,7 +186,7 @@ struct HomeView: View {
 
     private var featuredCarousel: some View {
         let dayIndex = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let dua = AthkarData.duas[dayIndex % AthkarData.duas.count].text
+        let dua = DailyContent.dua().text
         let name = AllahNames.all[dayIndex % AllahNames.all.count]
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 14) {
